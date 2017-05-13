@@ -60,7 +60,7 @@ int main(int argc, char** argv){
 
       cmdLine* cmdLine = parseCmdLines(userInput);
 
-      printCommandLine(cmdLine);
+      // printCommandLine(cmdLine);
 
       execute(cmdLine);
     }

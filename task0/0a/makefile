@@ -2,10 +2,10 @@
 all: main
 
 main: LineParser.o
-	gcc -g -m32 -Wall LineParser.o -o main
+	gcc -g  -Wall LineParser.o -o main
 
 LineParser.o: LineParser.c  LineParser.h
-	gcc -g -m32 -Wall -c LineParser.c -o LineParser.o
+	gcc -g  -Wall -c LineParser.c -o LineParser.o
 
 .PHONY:
 	clean

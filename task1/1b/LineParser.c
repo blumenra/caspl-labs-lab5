@@ -34,7 +34,7 @@ int main(int argc, char** argv){
     char* currArg;
     currArg = argv[i];
 
-    if((strlen(currArg) == 2) && (currArg[0] == '-') && (currArg[1] == 'd')){
+    if((strcmp(currArg, "-d") == 0)){
       debug = i;
     }
   }
@@ -52,6 +52,10 @@ int main(int argc, char** argv){
 
     printf("Please enter your input: \n");
     fgets(userInput, 2048, stdin);
+
+    if(strcmp(userInput, "quit") == 0)
+      exit(0);
+    
 
     cmdLine* cmdLine = parseCmdLines(userInput);
 
@@ -140,6 +144,7 @@ void reactToSignal(int signal){
 
   printf("\nThe signal that was recieved is '%s'\n", strsignal(signal));
   printf("The signal was ignored.\n");
+  printf("\n");
 }
 
 void setupSignal(int sig){

@@ -20,11 +20,11 @@ void reactToSignal(int signal);
 void setupSignal(int sig);
 
 
+int debug = 0;
 
 
 int main(int argc, char** argv){
 
-  int debug = 0;
   int i;
 
   for(i = 1; i < argc; i++){
@@ -75,10 +75,20 @@ int execute(cmdLine *pCmdLine){
   
   if(curr_pid == 0){
 
+    if(debug){
+      printf("Executing command: %s\n", pCmdLine->arguments[0]);
+    }
+
     if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
       
       perror("execv");
       _exit(EXIT_FAILURE);
+    }
+  }
+  else{
+
+    if(debug){
+      printf("PID: %d\n", (int) curr_pid);
     }
   }
 

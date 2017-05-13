@@ -13,6 +13,82 @@
 
 #define FREE(X) if(X) free((void*)X)
 
+int printCommandLine(cmdLine* cmdLine);
+int printCurrentPath();
+int execute(cmdLine *pCmdLine);
+void reactToSignal(int signal);
+void setupSignal(int sig);
+
+
+
+
+int main(int argc, char** argv){
+
+  int debug = 0;
+  int i;
+
+  for(i = 1; i < argc; i++){
+
+    char* currArg;
+    currArg = argv[i];
+
+    if((strlen(currArg) == 2) && (currArg[0] == '-') && (currArg[1] == 'd')){
+      debug = i;
+    }
+  }
+
+  setupSignal(SIGQUIT);
+  setupSignal(SIGTSTP);
+  setupSignal(SIGCHLD);
+
+
+  while(1){
+    
+    printCurrentPath();
+
+    char userInput[2048];
+
+    printf("Please enter your input: \n");
+    fgets(userInput, 2048, stdin);
+
+    cmdLine* cmdLine = parseCmdLines(userInput);
+
+    // printCommandLine(cmdLine);
+
+    execute(cmdLine);
+  }
+
+  return 0;
+}
+
+
+int execute(cmdLine *pCmdLine){
+
+  pid_t curr_pid;
+  curr_pid = fork();
+
+  if(curr_pid == -1){
+
+    perror("fork");
+    exit(EXIT_FAILURE);
+  }
+  
+  if(curr_pid == 0){
+
+    if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
+      
+      perror("execv");
+      _exit(EXIT_FAILURE);
+    }
+  }
+
+  freeCmdLines(pCmdLine);
+
+  return 0;
+}
+
+
+
 
 int printCommandLine(cmdLine* cmdLine){
 
@@ -47,18 +123,6 @@ int printCurrentPath(){
 
 
 
-int execute(cmdLine *pCmdLine){
-
-  if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
-    
-    perror("execv");
-    freeCmdLines(pCmdLine);
-    exit(EXIT_FAILURE);
-  }
-
-  return 0;
-}
-
 void reactToSignal(int signal){
 
   printf("\nThe signal that was recieved is '%s'\n", strsignal(signal));
@@ -72,39 +136,6 @@ void setupSignal(int sig){
     exit(EXIT_FAILURE);
   };
 }
-
-int main(int argc, char** argv){
-
-
-  setupSignal(SIGQUIT);
-  setupSignal(SIGTSTP);
-  setupSignal(SIGCHLD);
-
-
-  while(1){
-    
-    printCurrentPath();
-
-    char userInput[2048];
-
-    printf("Please enter your input: \n");
-    fgets(userInput, 2048, stdin);
-
-    cmdLine* cmdLine = parseCmdLines(userInput);
-
-    // printCommandLine(cmdLine);
-
-    execute(cmdLine);
-  }
-
-
-
-  return 0;
-}
-
-
-
-
 
 static char *cloneFirstWord(char *str)
 {

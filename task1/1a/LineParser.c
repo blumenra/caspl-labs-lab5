@@ -76,19 +76,14 @@ int execute(cmdLine *pCmdLine){
   if(curr_pid == 0){
 
     if(debug){
-      printf("Executing command: %s\n", pCmdLine->arguments[0]);
+      fprintf(stderr, "Child PID is %ld\n", (long) getpid());
+      fprintf(stderr, "Executing command: %s\n", pCmdLine->arguments[0]);
     }
 
     if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
       
       perror("execv");
       _exit(EXIT_FAILURE);
-    }
-  }
-  else{
-
-    if(debug){
-      printf("PID: %d\n", (int) curr_pid);
     }
   }
 

@@ -5,6 +5,7 @@
 #include "LineParser.h"
 #include <linux/limits.h>
 #include <unistd.h>
+#include <signal.h>
 
 #ifndef NULL
     #define NULL 0
@@ -54,14 +55,30 @@ int execute(cmdLine *pCmdLine){
     freeCmdLines(pCmdLine);
     exit(EXIT_FAILURE);
   }
-  printf("blabla\n");
 
   return 0;
-
 }
 
+void reactToSignal(int signal){
 
-int main(){
+  printf("\nThe signal that was recieved is '%s'\n", strsignal(signal));
+  printf("The signal was ignored.\n");
+}
+
+void setupSignal(int sig){
+
+  if(signal(sig, reactToSignal) == SIG_ERR){
+    perror("signal");
+    exit(EXIT_FAILURE);
+  };
+}
+
+int main(int argc, char** argv){
+
+
+  setupSignal(SIGQUIT);
+  setupSignal(SIGTSTP);
+  setupSignal(SIGCHLD);
 
 
   while(1){

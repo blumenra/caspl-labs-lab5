@@ -3,12 +3,21 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "LineParser.h"
+#include <linux/limits.h>
 
 #ifndef NULL
     #define NULL 0
 #endif
 
 #define FREE(X) if(X) free((void*)X)
+
+int main(){
+
+  printf("%d\n", PATH_MAX);
+  return 0;
+}
+
+
 
 static char *cloneFirstWord(char *str)
 {

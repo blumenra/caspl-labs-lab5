@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include "LineParser.h"
 #include <linux/limits.h>
+#include <unistd.h>
 
 #ifndef NULL
     #define NULL 0
@@ -11,11 +12,80 @@
 
 #define FREE(X) if(X) free((void*)X)
 
-int main(){
 
-  printf("%d\n", PATH_MAX);
+int printCommandLine(cmdLine* cmdLine){
+
+  int i;
+  
+  printf("arguments: ");
+  for(i = 0; i < cmdLine->argCount; i++){
+
+    printf("%s ", cmdLine->arguments[i]);
+  }
+  puts("");
+
+  printf("argCount: %d\n", cmdLine->argCount);
+  printf("inputRedirect: %s\n", cmdLine->inputRedirect);
+  printf("outputRedirect: %s\n", cmdLine->outputRedirect);
+  printf("blocking: %c\n", cmdLine->blocking);
+  printf("idx: %d\n", cmdLine->idx);
+
   return 0;
 }
+
+int printCurrentPath(){
+  
+  char buf[PATH_MAX];
+
+  getcwd(buf, PATH_MAX);
+
+  printf("current path: %s\n", buf);  
+  
+  return 0;  
+}
+
+
+
+int execute(cmdLine *pCmdLine){
+
+  if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
+    
+    perror("execv");
+    freeCmdLines(pCmdLine);
+    exit(EXIT_FAILURE);
+  }
+  printf("blabla\n");
+
+  return 0;
+
+}
+
+
+int main(){
+
+
+  while(1){
+    
+    printCurrentPath();
+
+    char userInput[2048];
+
+    printf("Please enter your input: \n");
+    fgets(userInput, 2048, stdin);
+
+    cmdLine* cmdLine = parseCmdLines(userInput);
+
+    // printCommandLine(cmdLine);
+
+    execute(cmdLine);
+  }
+
+
+
+  return 0;
+}
+
+
 
 
 

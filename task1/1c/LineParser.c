@@ -50,18 +50,20 @@ int main(int argc, char** argv){
 
     char userInput[2048];
 
-    printf("Please enter your input: \n");
+    printf(" >> ");
     fgets(userInput, 2048, stdin);
 
-    if(strcmp(userInput, "quit") == 0)
+    if(strcmp(userInput, "quit\n") == 0)
       exit(0);
     
+    if(userInput[0] != '\n'){
 
-    cmdLine* cmdLine = parseCmdLines(userInput);
+      cmdLine* cmdLine = parseCmdLines(userInput);
 
-    // printCommandLine(cmdLine);
+      printCommandLine(cmdLine);
 
-    execute(cmdLine);
+      execute(cmdLine);
+    }
   }
 
   return 0;
@@ -72,35 +74,46 @@ int execute(cmdLine *pCmdLine){
 
   pid_t curr_pid;
   int status = 0;
-  curr_pid = fork();
 
-  if(curr_pid == -1){
+  if(strcmp(pCmdLine->arguments[0], "cd") == 0){
 
-    perror("fork");
-    exit(EXIT_FAILURE);
+      if(chdir(pCmdLine->arguments[1]) == -1){
+        
+        perror("cd");
+      }
   }
-  
-  if(curr_pid == 0){
+  else{
 
-    if(debug){
-      fprintf(stderr, "Child PID is %ld\n", (long) getpid());
-      fprintf(stderr, "Executing command: %s\n", pCmdLine->arguments[0]);
-    }
+    curr_pid = fork();
 
-    if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
-      
-      perror("execv");
-      _exit(EXIT_FAILURE);
-    }
-  }
+    if(curr_pid == -1){
 
-  // if it's a blocking command' wait for the child process (0) to end before proceeding
-  if(pCmdLine->blocking){
-    
-    if(waitpid(curr_pid, &status, WIFSIGNALED(0)) == -1){
-      perror("waitpid");
+      perror("fork");
       exit(EXIT_FAILURE);
-    };
+    }
+    
+    if(curr_pid == 0){
+
+      if(debug){
+        fprintf(stderr, "Child PID is %ld\n", (long) getpid());
+        fprintf(stderr, "Executing command: %s\n", pCmdLine->arguments[0]);
+      }
+
+      if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
+        
+        perror("execv");
+        _exit(EXIT_FAILURE);
+      }
+    }
+
+    // if it's a blocking command' wait for the child process (0) to end before proceeding
+    if(pCmdLine->blocking){
+      
+      if(waitpid(curr_pid, &status, WIFSIGNALED(0)) == -1){
+        perror("waitpid");
+        exit(EXIT_FAILURE);
+      };
+    }
   }
 
   freeCmdLines(pCmdLine);
@@ -137,7 +150,7 @@ int printCurrentPath(){
 
   getcwd(buf, PATH_MAX);
 
-  printf("current path: %s\n", buf);  
+  printf("%s", buf);  
   
   return 0;  
 }

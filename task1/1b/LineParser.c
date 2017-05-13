@@ -6,6 +6,8 @@
 #include <linux/limits.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #ifndef NULL
     #define NULL 0
@@ -65,6 +67,7 @@ int main(int argc, char** argv){
 int execute(cmdLine *pCmdLine){
 
   pid_t curr_pid;
+  int status = 0;
   curr_pid = fork();
 
   if(curr_pid == -1){
@@ -85,6 +88,11 @@ int execute(cmdLine *pCmdLine){
       perror("execv");
       _exit(EXIT_FAILURE);
     }
+  }
+
+  // if it's a blocking command' wait for the child process (0) to end before proceeding
+  if(pCmdLine->blocking){
+    waitpid(0, &status, WIFSIGNALED(0));
   }
 
   freeCmdLines(pCmdLine);

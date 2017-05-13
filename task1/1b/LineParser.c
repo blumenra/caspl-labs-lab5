@@ -96,7 +96,11 @@ int execute(cmdLine *pCmdLine){
 
   // if it's a blocking command' wait for the child process (0) to end before proceeding
   if(pCmdLine->blocking){
-    waitpid(0, &status, WIFSIGNALED(0));
+    
+    if(waitpid(curr_pid, &status, WIFSIGNALED(0)) == -1){
+      perror("waitpid");
+      exit(EXIT_FAILURE);
+    };
   }
 
   freeCmdLines(pCmdLine);

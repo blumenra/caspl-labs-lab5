@@ -12,14 +12,14 @@ int main(int argc, char** argv){
 	job* job2 = addJob(jobs, cmd2);
 	printJobs(jobs);
 
-	job* jobToFind = findJobByIndex(job1, 1);
-	myPrintJob(job1, 1);
+	// job* jobToFind = findJobByIndex(job1, 1);
+	// myPrintJob(job1, 1);
 	
-	jobToFind = findJobByIndex(job1, 2);
-	myPrintJob(jobToFind, 1);
+	// jobToFind = findJobByIndex(job1, 2);
+	// myPrintJob(jobToFind, 1);
 
-	jobToFind = findJobByIndex(job1, 3);
-	myPrintJob(jobToFind, 1);
+	// jobToFind = findJobByIndex(job1, 3);
+	// myPrintJob(jobToFind, 1);
 
 	freeJobList(jobs);
 
@@ -119,13 +119,15 @@ char* statusToStr(int status)
 **/
 void printJobs(job** job_list){
 
-	job* tmp = *job_list;
 	updateJobList(job_list, FALSE);
+	job* tmp = *job_list;
+
 	while (tmp != NULL){
 		printf("[%d]\t %s \t\t %s", tmp->idx, statusToStr(tmp->status),tmp -> cmd); 
 		
-		if (tmp -> cmd[strlen(tmp -> cmd)-1]  != '\n')
+		if (tmp -> cmd[strlen(tmp -> cmd)-1]  != '\n'){
 			printf("\n");
+		}
 		job* job_to_remove = tmp;
 		tmp = tmp -> next;
 		if (job_to_remove->status == DONE)
@@ -159,12 +161,8 @@ void freeJob(job* job_to_remove){
 		
 		free(job_to_remove->cmd);
 		free(job_to_remove->tmodes);
-		// job* next = job_to_remove->next;
-		// freeJob(next);
 		free(job_to_remove);
 	}
-	
-
 }
 
 
@@ -226,19 +224,17 @@ job* findJobByIndex(job* job_list, int idx){
 **/
 void updateJobList(job **job_list, int remove_done_jobs){
 
+	job* tmp = *job_list;
 
-	while(*job_list != NULL){
+	while(tmp != NULL){
 		
-		job* tmp = *job_list;
-		
-		printf("status before waitpid: %d\n", tmp->status);
+		job* nextJob = tmp->next;
+
 		waitpid(tmp->pgid, &(tmp->status), WNOHANG);
-		printf("status after waitpid: %d\n", tmp->status);
 
 		if(tmp->status == SUSPENDED){
 
 			tmp->status = DONE;
-			printf("status after change to DONE waitpid: %d\n", tmp->status);
 
 			if(remove_done_jobs){
 
@@ -249,10 +245,9 @@ void updateJobList(job **job_list, int remove_done_jobs){
 
 				removeJob(job_list, tmp);
 			}
-			
-
-			*job_list = (*job_list) -> next;
 		}
+
+		tmp = nextJob;
 	}
 }
 

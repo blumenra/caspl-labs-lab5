@@ -1,12 +1,65 @@
 #include "JobControl.h"
 
+
+void myPrintJob(job* j, int count);
+
+int main(int argc, char** argv){
+
+	job* jobs[5] = {0, 0, 0, 0, 0};
+	char* cmd1 = "ls | grep .o\0";
+	char* cmd2 = "du | grep .o\0";
+	job* job1 = addJob(jobs, cmd1);
+	job* job2 = addJob(jobs, cmd2);
+	printJobs(jobs);
+
+	job* jobToFind = findJobByIndex(job1, 1);
+	myPrintJob(job1, 1);
+	
+	jobToFind = findJobByIndex(job1, 2);
+	myPrintJob(jobToFind, 1);
+
+	jobToFind = findJobByIndex(job1, 3);
+	myPrintJob(jobToFind, 1);
+
+	freeJobList(jobs);
+
+	return 0;
+}
+
+
+void myPrintJob(job* j, int count){
+
+	if(j == NULL){
+
+		fprintf(stderr, "The job is NULL\n");
+	}
+	else{
+
+		printf("\n");
+		printf("Job %d:\n", count);
+		printf("\tcmd: %s\n", j->cmd);
+		printf("\tidx: %d\n", j->idx);
+		printf("\tpgid: %d\n", (int) j->pgid);
+		printf("\tstatus: %d\n", j->status);
+		printf("\ttmodes: %d\n", tcgetattr(0, j->tmodes));
+		// printf("tmodes: %d\n", tcgetattr(1, j->tmodes));
+
+		if(j->next != NULL){
+
+			count++;
+			myPrintJob(j->next, count);
+		}
+	}
+}
+
+
 /**
 * Receive a pointer to a job list and a new command to add to the job list and adds it to it.
 * Create a new job list if none exists.
 **/
 job* addJob(job** job_list, char* cmd){
 	job* job_to_add = initializeJob(cmd);
-	
+
 	if (*job_list == NULL){
 		*job_list = job_to_add;
 		job_to_add -> idx = 1;
@@ -101,6 +154,17 @@ void freeJobList(job** job_list){
 **/
 void freeJob(job* job_to_remove){
 
+	
+	if(job_to_remove != NULL){
+		
+		free(job_to_remove->cmd);
+		free(job_to_remove->tmodes);
+		// job* next = job_to_remove->next;
+		// freeJob(next);
+		free(job_to_remove);
+	}
+	
+
 }
 
 
@@ -113,6 +177,19 @@ void freeJob(job* job_to_remove){
 
 job* initializeJob(char* cmd){
 	
+	job* newJob = (job*) (malloc(sizeof(job)));
+
+	newJob->cmd = (char*) (malloc((sizeof(char)*(strlen(cmd))) + 1));
+	memcpy(newJob->cmd, cmd, (strlen(cmd)));
+	newJob->cmd[(strlen(cmd))] = '\0';
+
+	newJob->idx = 0;
+	newJob->pgid = 0;
+	newJob->status = 0;
+	newJob->tmodes = (struct termios*) (malloc(sizeof(struct termios)));
+	newJob->next = NULL;
+
+	return newJob;
 }
 
 
@@ -121,7 +198,25 @@ job* initializeJob(char* cmd){
 * Print an error message if no job with such an index exists.
 **/
 job* findJobByIndex(job* job_list, int idx){
-  
+
+	job* tempJob = job_list;
+
+	while(tempJob != NULL){
+
+		if(tempJob->idx == idx){
+
+			return tempJob;
+		}
+
+		if(tempJob->next != NULL)
+			tempJob = tempJob->next;
+		else
+			break;
+	}
+
+	fprintf(stderr, "A job with index %d does not exist!\n", idx);
+
+	return NULL;
 }
 
 
@@ -131,6 +226,34 @@ job* findJobByIndex(job* job_list, int idx){
 **/
 void updateJobList(job **job_list, int remove_done_jobs){
 
+
+	while(*job_list != NULL){
+		
+		job* tmp = *job_list;
+		
+		printf("status before waitpid: %d\n", tmp->status);
+		waitpid(tmp->pgid, &(tmp->status), WNOHANG);
+		printf("status after waitpid: %d\n", tmp->status);
+
+		if(tmp->status == SUSPENDED){
+
+			tmp->status = DONE;
+			printf("status after change to DONE waitpid: %d\n", tmp->status);
+
+			if(remove_done_jobs){
+
+				printf("[%d]\t %s \t\t %s", tmp->idx, statusToStr(tmp->status),tmp -> cmd); 
+		
+				if (tmp -> cmd[strlen(tmp -> cmd)-1]  != '\n')
+					printf("\n");
+
+				removeJob(job_list, tmp);
+			}
+			
+
+			*job_list = (*job_list) -> next;
+		}
+	}
 }
 
 /** 

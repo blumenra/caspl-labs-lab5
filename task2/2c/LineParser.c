@@ -21,13 +21,17 @@ int printCommandLine(cmdLine* cmdLine);
 int printCurrentPath();
 int execute(cmdLine *pCmdLine);
 void reactToSignal(int signal);
-void setupSignal(int sig);
+void setupSignals(int parent);
+void setupSignal(int sig, int dfl);
 void handleNewJob(job** Job_list, cmdLine* cmd);
 int specialCommand(cmdLine *pCmdLine);
 int delay();
+void initialize_shell();
+void set_pgid();
 
 int debug = 0;
 job* jobs[] = {0};
+struct termios *initial_tmodes = NULL;
 
 
 int main(int argc, char** argv){
@@ -36,6 +40,20 @@ int main(int argc, char** argv){
   // char* cmd2 = "du | grep .o";
   // job* newJob = addJob(jobs, cmd1);
   // job1->status = RUNNING;
+
+  // printf("getpgrp(): %d\n", (int) getpgrp());
+  // printf("getpgrp(): %d\n", (int) getpgrp());
+  // printf("tcgetpgrp(getpid()): %d\n", (int) tcgetpgrp(getpid()));
+
+
+
+  // printf("getpid(): %d\n", (int) getpid());
+  // printf("getpgid(tcgetpgrp(0)): %d\n", (int) getpgid(getpid()));
+
+  initial_tmodes = (struct termios*) (malloc(sizeof(struct termios)));
+
+  initialize_shell();  
+  
 
   int i;
 
@@ -49,10 +67,7 @@ int main(int argc, char** argv){
     }
   }
 
-  setupSignal(SIGQUIT);
-  setupSignal(SIGTSTP);
-  setupSignal(SIGCHLD);
-
+  
 
   while(1){
     
@@ -65,6 +80,7 @@ int main(int argc, char** argv){
 
     if(strcmp(userInput, "quit\n") == 0){
       freeJobList(jobs);
+      free(initial_tmodes);
       exit(0);
     }
     
@@ -111,6 +127,9 @@ int execute(cmdLine *pCmdLine){
         fprintf(stderr, "Child PID is %ld\n", (long) getpid());
         fprintf(stderr, "Executing command: %s\n", pCmdLine->arguments[0]);
       }
+      
+      setupSignals(0);
+      set_pgid();
 
       if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
         
@@ -135,6 +154,32 @@ int execute(cmdLine *pCmdLine){
   freeCmdLines(pCmdLine);
 
   return 0;
+}
+
+
+void initialize_shell(){
+
+  setupSignals(1);
+
+  set_pgid();
+  // printf("getpgid(tcgetpgrp(0)): %d\n", (int) getpgid(getpid()));
+  if(tcgetattr(STDIN_FILENO, initial_tmodes) == -1){
+
+    perror("tcgetattr");
+    exit(0);
+  }
+}
+
+
+void set_pgid(){
+
+  if(setpgid(getpid(), getpid()) == -1){
+
+    perror("setpgid");
+    exit(0);
+  }
+
+  printf("getpgid: %d\n", (int) getpgid(getpid()));
 }
 
 
@@ -214,21 +259,60 @@ int printCurrentPath(){
 }
 
 
+// Ignore the following signals: SIGTTIN, SIGTTOU and use your signal handler from task0b
+// to handle the following signals: SIGQUIT, SIGCHLD, SIGSTP
+// (We're not including SIGINT here so you can kill the shell with ^C if there's a bug somewhere)
+void setupSignals(int parent){
+
+  setupSignal(SIGTTIN, !parent);
+  setupSignal(SIGTTOU, !parent);
+  setupSignal(SIGQUIT, !parent);
+  setupSignal(SIGTSTP, !parent);
+  setupSignal(SIGCHLD, !parent);
+}
+
+
+void setupSignal(int sig, int dfl){
+
+  if(!dfl){
+
+    if((sig == SIGTTIN) || (sig == SIGTTOU)){
+
+      if(signal(sig, SIG_IGN) == SIG_ERR){
+
+        perror("signal");
+        exit(EXIT_FAILURE); 
+      }
+    }
+    else{
+     
+      if(signal(sig, reactToSignal) == SIG_ERR){
+
+        perror("signal");
+        exit(EXIT_FAILURE); 
+      }
+    }
+  }
+  else{
+
+    if(signal(sig, SIG_DFL) == SIG_ERR){
+
+      perror("signal");
+      exit(EXIT_FAILURE); 
+    }
+  }
+
+  
+}
+
 
 void reactToSignal(int signal){
 
-  // printf("\nThe signal that was recieved is '%s'\n", strsignal(signal));
-  // printf("The signal was ignored.\n");
-  // printf("\n");
+  printf("\nThe signal that was recieved is '%s'\n", strsignal(signal));
+  printf("The signal was ignored.\n");
+  printf("\n");
 }
 
-void setupSignal(int sig){
-
-  if(signal(sig, reactToSignal) == SIG_ERR){
-    perror("signal");
-    exit(EXIT_FAILURE);
-  };
-}
 
 static char *cloneFirstWord(char *str)
 {

@@ -28,6 +28,7 @@ int specialCommand(cmdLine *pCmdLine);
 int delay();
 void initialize_shell();
 void set_pgid();
+int print_tmodes(struct termios *tmodes);
 
 int debug = 0;
 job* jobs[] = {0};
@@ -52,8 +53,9 @@ int main(int argc, char** argv){
 
   initial_tmodes = (struct termios*) (malloc(sizeof(struct termios)));
 
-  initialize_shell();  
-  
+  initialize_shell();
+
+  // print_tmodes(initial_tmodes);
 
   int i;
 
@@ -223,6 +225,32 @@ int specialCommand(cmdLine *pCmdLine){
   }
 
   return special;
+}
+
+
+int print_tmodes(struct termios *tmodes){
+
+  if(tmodes == NULL){
+
+    printf("The termios is NULL!\n");
+    return -1;
+  }
+
+  printf("c_iflag: %d\n", (int) tmodes->c_iflag);
+  printf("c_oflag: %d\n", (int) tmodes->c_oflag);
+  printf("c_cflag: %d\n", (int) tmodes->c_cflag);
+  printf("c_lflag: %d\n", (int) tmodes->c_lflag);
+  
+  printf("c_cc: ");
+  int i;
+  int len = (int) strlen((char*) tmodes->c_cc);
+  for(i=0; i < len; i++){
+
+    printf("%d", (int) tmodes->c_cc[i]);
+  }
+  printf("\n");
+
+  return 0;
 }
 
 

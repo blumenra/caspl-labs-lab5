@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 
 #ifndef NULL
     #define NULL 0
@@ -23,6 +24,7 @@ void reactToSignal(int signal);
 void setupSignal(int sig);
 void handleNewJob(job** Job_list, cmdLine* cmd);
 int specialCommand(cmdLine *pCmdLine);
+int delay();
 
 int debug = 0;
 job* jobs[] = {0};
@@ -81,11 +83,7 @@ int main(int argc, char** argv){
 
 
 
-void handleNewJob(job** Job_list, cmdLine* cmd){
 
-    job* newJob = addJob(Job_list, cmd->arguments[0]);
-    newJob->status = RUNNING;
-}
 
 
 int execute(cmdLine *pCmdLine){
@@ -121,10 +119,13 @@ int execute(cmdLine *pCmdLine){
       }
     }
 
+    delay();
+
     // if it's a blocking command' wait for the child process (0) to end before proceeding
     if(pCmdLine->blocking){
-      
-      if(waitpid(curr_pid, &status, WIFSIGNALED(0)) == -1){
+      // if(waitpid(curr_pid, &status, WIFSIGNALED(0)) == -1){
+      if(waitpid(curr_pid, &status, 0) == -1){
+      // if(wait(&status) == -1){
         perror("waitpid");
         exit(EXIT_FAILURE);
       }
@@ -134,6 +135,23 @@ int execute(cmdLine *pCmdLine){
   freeCmdLines(pCmdLine);
 
   return 0;
+}
+
+
+void handleNewJob(job** Job_list, cmdLine* cmd){
+
+    job* newJob = addJob(Job_list, cmd->arguments[0]);
+    newJob->status = RUNNING;
+}
+
+
+int delay(){
+
+  struct timespec tim, tim2;
+  tim.tv_sec = 0;
+  tim.tv_nsec = 5000000L;
+
+  return nanosleep(&tim, &tim2);
 }
 
 

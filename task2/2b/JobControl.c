@@ -3,28 +3,28 @@
 
 void myPrintJob(job* j, int count);
 
-int main(int argc, char** argv){
+// int main(int argc, char** argv){
 
-	job* jobs[5] = {0, 0, 0, 0, 0};
-	char* cmd1 = "ls | grep .o\0";
-	char* cmd2 = "du | grep .o\0";
-	job* job1 = addJob(jobs, cmd1);
-	job* job2 = addJob(jobs, cmd2);
-	printJobs(jobs);
+	// job* jobs[5] = {0, 0, 0, 0, 0};
+	// char* cmd1 = "ls | grep .o\0";
+	// char* cmd2 = "du | grep .o\0";
+	// job* job1 = addJob(jobs, cmd1);
+// 	job* job2 = addJob(jobs, cmd2);
+	// printJobs(jobs);
 
-	// job* jobToFind = findJobByIndex(job1, 1);
-	// myPrintJob(job1, 1);
+// 	// job* jobToFind = findJobByIndex(job1, 1);
+// 	// myPrintJob(job1, 1);
 	
-	// jobToFind = findJobByIndex(job1, 2);
-	// myPrintJob(jobToFind, 1);
+// 	// jobToFind = findJobByIndex(job1, 2);
+// 	// myPrintJob(jobToFind, 1);
 
-	// jobToFind = findJobByIndex(job1, 3);
-	// myPrintJob(jobToFind, 1);
+// 	// jobToFind = findJobByIndex(job1, 3);
+// 	// myPrintJob(jobToFind, 1);
 
-	freeJobList(jobs);
+// 	freeJobList(jobs);
 
-	return 0;
-}
+// 	return 0;
+// }
 
 
 void myPrintJob(job* j, int count){

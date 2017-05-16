@@ -23,7 +23,7 @@ int execute(cmdLine *pCmdLine);
 void reactToSignal(int signal);
 void setupSignals(int parent);
 void setupSignal(int sig, int dfl);
-void handleNewJob(job** Job_list, cmdLine* cmd);
+job* handleNewJob(job** Job_list, cmdLine* cmd);
 int specialCommand(cmdLine *pCmdLine);
 int delay();
 void initialize_shell();
@@ -33,7 +33,7 @@ int print_tmodes(struct termios *tmodes);
 int debug = 0;
 job* jobs[] = {0};
 struct termios *initial_tmodes = NULL;
-
+pid_t shell_pgid;
 
 int main(int argc, char** argv){
 
@@ -54,6 +54,7 @@ int main(int argc, char** argv){
   initial_tmodes = (struct termios*) (malloc(sizeof(struct termios)));
 
   initialize_shell();
+  shell_pgid = getpgid(getpid());
 
   // print_tmodes(initial_tmodes);
 
@@ -69,7 +70,29 @@ int main(int argc, char** argv){
     }
   }
 
-  
+  // pid_t parent_pgid = getpid();
+  // pid_t child = fork();
+  // if(child == 0){
+
+  //   printf("inside child- getpgid right before setpgid: %d\n", (int) getpgid(getpid()));
+  //   if(setpgid(getpid(), parent_pgid) == -1){
+
+  //     perror("setpgid");
+  //     exit(0);
+  //   }
+  //   printf("inside child- getpgid right after setpgid: %d\n", (int) getpgid(getpid()));
+
+  //   pause();
+  //   // sleep(5);
+  //   exit(0);
+  // }
+
+  // int statusss;
+  // printf("getpid right before waitpid: %d\n", (int) getpgid(getpid()));
+  // if(waitpid(0, &statusss, WUNTRACED | WUNTRACED) == -1){
+  //   perror("waitpid");
+  // }
+  // puts("after waitpid");
 
   while(1){
     
@@ -107,12 +130,14 @@ int main(int argc, char** argv){
 int execute(cmdLine *pCmdLine){
 
   pid_t curr_pid;
-  int status = 0;
+  int pid = getpid();
+  // int status = 0;
 
 
   if(!specialCommand(pCmdLine)){
 
-    handleNewJob(jobs, pCmdLine);
+    job* j = handleNewJob(jobs, pCmdLine);
+    j->pgid = pid;
     
     curr_pid = fork();
 
@@ -124,32 +149,38 @@ int execute(cmdLine *pCmdLine){
     
     if(curr_pid == 0){
       
-
       if(debug){
         fprintf(stderr, "Child PID is %ld\n", (long) getpid());
         fprintf(stderr, "Executing command: %s\n", pCmdLine->arguments[0]);
       }
       
+      curr_pid = pid;
+
+      setpgid(curr_pid, pid);
+
       setupSignals(0);
-      set_pgid();
 
       if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
         
         perror("execv");
         _exit(EXIT_FAILURE);
       }
+
+      exit(1);
     }
+    
 
     delay();
 
     // if it's a blocking command' wait for the child process (0) to end before proceeding
     if(pCmdLine->blocking){
+      runJobInForeground (jobs, j, 1, initial_tmodes, shell_pgid);
       // if(waitpid(curr_pid, &status, WIFSIGNALED(0)) == -1){
-      if(waitpid(curr_pid, &status, 0) == -1){
-      // if(wait(&status) == -1){
-        perror("waitpid");
-        exit(EXIT_FAILURE);
-      }
+      // if(waitpid(curr_pid, &status, 0) == -1){
+      // // if(wait(&status) == -1){
+      //   perror("waitpid");
+      //   exit(EXIT_FAILURE);
+      // }
     }
   }
 
@@ -165,6 +196,9 @@ void initialize_shell(){
 
   set_pgid();
   // printf("getpgid(tcgetpgrp(0)): %d\n", (int) getpgid(getpid()));
+
+  tcsetpgrp(STDIN_FILENO, getpid());
+
   if(tcgetattr(STDIN_FILENO, initial_tmodes) == -1){
 
     perror("tcgetattr");
@@ -185,10 +219,12 @@ void set_pgid(){
 }
 
 
-void handleNewJob(job** Job_list, cmdLine* cmd){
+job* handleNewJob(job** Job_list, cmdLine* cmd){
 
-    job* newJob = addJob(Job_list, cmd->arguments[0]);
-    newJob->status = RUNNING;
+  job* newJob = addJob(Job_list, cmd->arguments[0]);
+  newJob->status = RUNNING;
+
+  return newJob;
 }
 
 
@@ -204,9 +240,13 @@ int delay(){
 
 int specialCommand(cmdLine *pCmdLine){
 
+  // printCommandLine(pCmdLine);
+
   int special = 0;
 
   char* command = pCmdLine->arguments[0];
+
+  // printf("command: %s\n", command);
 
   if(strcmp(command, "cd") == 0){
 
@@ -222,6 +262,12 @@ int specialCommand(cmdLine *pCmdLine){
     special = 1;
 
     printJobs(jobs);
+  }
+  else if(strcmp(command, "fg") == 0){
+
+      runJobInForeground (jobs, (findJobByIndex(*jobs, atoi(pCmdLine->arguments[1]))), 1, initial_tmodes, shell_pgid);
+
+    special = 1;
   }
 
   return special;
@@ -329,8 +375,6 @@ void setupSignal(int sig, int dfl){
       exit(EXIT_FAILURE); 
     }
   }
-
-  
 }
 
 

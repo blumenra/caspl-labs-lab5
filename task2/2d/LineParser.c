@@ -18,6 +18,7 @@
 #define FREE(X) if(X) free((void*)X)
 
 int printCommandLine(cmdLine* cmdLine);
+void debugger(int argc, char** argv);
 int printCurrentPath();
 int execute(cmdLine *pCmdLine);
 void reactToSignal(int signal);
@@ -35,64 +36,14 @@ job* jobs[] = {0};
 struct termios *initial_tmodes = NULL;
 pid_t shell_pgid;
 
+
+
 int main(int argc, char** argv){
 
-  // char* cmd1 = "ls | grep .o";
-  // char* cmd2 = "du | grep .o";
-  // job* newJob = addJob(jobs, cmd1);
-  // job1->status = RUNNING;
-
-  // printf("getpgrp(): %d\n", (int) getpgrp());
-  // printf("getpgrp(): %d\n", (int) getpgrp());
-  // printf("tcgetpgrp(getpid()): %d\n", (int) tcgetpgrp(getpid()));
-
-
-
-  // printf("getpid(): %d\n", (int) getpid());
-  // printf("getpgid(tcgetpgrp(0)): %d\n", (int) getpgid(getpid()));
-
-  initial_tmodes = (struct termios*) (malloc(sizeof(struct termios)));
-
   initialize_shell();
-  shell_pgid = getpgid(getpid());
 
-  // print_tmodes(initial_tmodes);
+  debugger(argc, argv);
 
-  int i;
-
-  for(i = 1; i < argc; i++){
-
-    char* currArg;
-    currArg = argv[i];
-
-    if((strcmp(currArg, "-d") == 0)){
-      debug = i;
-    }
-  }
-
-  // pid_t parent_pgid = getpid();
-  // pid_t child = fork();
-  // if(child == 0){
-
-  //   printf("inside child- getpgid right before setpgid: %d\n", (int) getpgid(getpid()));
-  //   if(setpgid(getpid(), parent_pgid) == -1){
-
-  //     perror("setpgid");
-  //     exit(0);
-  //   }
-  //   printf("inside child- getpgid right after setpgid: %d\n", (int) getpgid(getpid()));
-
-  //   pause();
-  //   // sleep(5);
-  //   exit(0);
-  // }
-
-  // int statusss;
-  // printf("getpid right before waitpid: %d\n", (int) getpgid(getpid()));
-  // if(waitpid(0, &statusss, WUNTRACED | WUNTRACED) == -1){
-  //   perror("waitpid");
-  // }
-  // puts("after waitpid");
 
   while(1){
     
@@ -130,8 +81,6 @@ int main(int argc, char** argv){
 int execute(cmdLine *pCmdLine){
 
   pid_t curr_pid;
-  // int pid = getpid();
-  // int status = 0;
 
 
   if(!specialCommand(pCmdLine)){
@@ -154,17 +103,8 @@ int execute(cmdLine *pCmdLine){
         fprintf(stderr, "Executing command: %s\n", pCmdLine->arguments[0]);
       }
       
-      // curr_pid = pid;
-
-      // setpgid(curr_pid, pid);
       set_pgid();
-      // setupSignals(0);
-
-      signal(SIGTTIN, SIG_DFL);
-      signal(SIGTTOU, SIG_DFL);
-      signal(SIGQUIT, SIG_DFL);
-      signal(SIGTSTP, SIG_DFL);
-      signal(SIGCHLD, SIG_DFL);
+      setupSignals(0);
 
       j->pgid = getgid();
 
@@ -182,13 +122,8 @@ int execute(cmdLine *pCmdLine){
 
     // if it's a blocking command' wait for the child process (0) to end before proceeding
     if(pCmdLine->blocking){
+
       runJobInForeground (jobs, j, 0, initial_tmodes, shell_pgid);
-      // if(waitpid(curr_pid, &status, WIFSIGNALED(0)) == -1){
-      // if(waitpid(curr_pid, &status, 0) == -1){
-      // // if(wait(&status) == -1){
-      //   perror("waitpid");
-      //   exit(EXIT_FAILURE);
-      // }
     }
   }
 
@@ -200,10 +135,9 @@ int execute(cmdLine *pCmdLine){
 
 void initialize_shell(){
 
+  initial_tmodes = (struct termios*) (malloc(sizeof(struct termios)));
   setupSignals(1);
-
   set_pgid();
-  // printf("getpgid(tcgetpgrp(0)): %d\n", (int) getpgid(getpid()));
 
   tcsetpgrp(STDIN_FILENO, getpid());
 
@@ -212,6 +146,8 @@ void initialize_shell(){
     perror("tcgetattr");
     exit(0);
   }
+
+  shell_pgid = getpgid(getpid());
 }
 
 
@@ -222,8 +158,6 @@ void set_pgid(){
     perror("setpgid");
     exit(0);
   }
-
-  printf("getpgid: %d\n", (int) getpgid(getpid()));
 }
 
 
@@ -248,13 +182,8 @@ int delay(){
 
 int specialCommand(cmdLine *pCmdLine){
 
-  // printCommandLine(pCmdLine);
-
   int special = 0;
-
   char* command = pCmdLine->arguments[0];
-
-  // printf("command: %s\n", command);
 
   if(strcmp(command, "cd") == 0){
 
@@ -273,9 +202,19 @@ int specialCommand(cmdLine *pCmdLine){
   }
   else if(strcmp(command, "fg") == 0){
 
-      runJobInForeground (jobs, (findJobByIndex(*jobs, atoi(pCmdLine->arguments[1]))), 1, initial_tmodes, shell_pgid);
+    if(pCmdLine->argCount < 2){
 
-    special = 1;
+      fprintf(stderr, "Invalid input of fg. Index is missing.\n");
+    }
+    else{
+
+      job* tmp = findJobByIndex(*jobs, atoi(pCmdLine->arguments[1]));
+      if(tmp != NULL){
+
+        runJobInForeground (jobs, tmp, 1, initial_tmodes, shell_pgid);
+      }
+    }
+      special = 1;
   }
 
   return special;
@@ -388,9 +327,25 @@ void setupSignal(int sig, int dfl){
 
 void reactToSignal(int signal){
 
-  printf("\nThe signal that was recieved is '%s'\n", strsignal(signal));
-  printf("The signal was ignored.\n");
-  printf("\n");
+  // printf("\nThe signal that was recieved is '%s'\n", strsignal(signal));
+  // printf("The signal was ignored.\n");
+  // printf("\n");
+}
+
+
+void debugger(int argc, char** argv){
+
+  int i;
+
+  for(i = 1; i < argc; i++){
+
+    char* currArg;
+    currArg = argv[i];
+
+    if((strcmp(currArg, "-d") == 0)){
+      debug = i;
+    }
+  }
 }
 
 

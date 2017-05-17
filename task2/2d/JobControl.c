@@ -1,32 +1,6 @@
 #include "JobControl.h"
 
 
-void myPrintJob(job* j, int count);
-
-// int main(int argc, char** argv){
-
-	// job* jobs[5] = {0, 0, 0, 0, 0};
-	// char* cmd1 = "ls | grep .o\0";
-	// char* cmd2 = "du | grep .o\0";
-	// job* job1 = addJob(jobs, cmd1);
-// 	job* job2 = addJob(jobs, cmd2);
-	// printJobs(jobs);
-
-// 	// job* jobToFind = findJobByIndex(job1, 1);
-// 	// myPrintJob(job1, 1);
-	
-// 	// jobToFind = findJobByIndex(job1, 2);
-// 	// myPrintJob(jobToFind, 1);
-
-// 	// jobToFind = findJobByIndex(job1, 3);
-// 	// myPrintJob(jobToFind, 1);
-
-// 	freeJobList(jobs);
-
-// 	return 0;
-// }
-
-
 void myPrintJob(job* j, int count){
 
 	if(j == NULL){
@@ -230,14 +204,11 @@ void updateJobList(job **job_list, int remove_done_jobs){
 
 		job* nextJob = tmp->next;
 
-		// myPrintJob(tmp, 1);
 		ret = waitpid(tmp->pgid, &stat, WNOHANG);
 
-		printf("ret before ret check %d\n", ret);
 		if(ret > 0){
 			tmp->status = DONE;
 		}
-		printf("ret after ret check %d\n", ret);
 
 		if(remove_done_jobs){
 
@@ -264,74 +235,72 @@ void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell
 	pid_t ret;
 	int stat;
 
-	if(j != NULL){
 
-		ret = waitpid(j->pgid, &stat, WNOHANG);
+	ret = waitpid(j->pgid, &stat, WNOHANG);
 
-		if(ret == -1){
+	if(ret == -1){
 
-			printf("[%d]\t %s \t\t %s", j->idx, statusToStr(j->status),j -> cmd); 
+		printf("[%d]\t %s \t\t %s", j->idx, statusToStr(j->status),j -> cmd); 
 
-			if (j -> cmd[strlen(j -> cmd)-1]  != '\n'){
-				printf("\n");
-			}
-			removeJob(job_list, j);;
+		if (j -> cmd[strlen(j -> cmd)-1]  != '\n'){
+			printf("\n");
 		}
-		else if(ret == 0){
-			puts("2");
-
-			tcsetpgrp(STDIN_FILENO, j->pgid);
-
-			if((cont == 1) && (j->status == SUSPENDED)){
-			// if(cont == 1){
-				puts("4");
-
-				tcsetattr(STDIN_FILENO, TCSADRAIN, j->tmodes);
-				
-				if(kill(j->pgid, SIGCONT) == -1){
-
-					perror("kill");
-					exit(0); // NOT sure if necessary..
-				}
-			}
-			
-			puts("4.5");
-
-			// printf("j->status before: %d\n", j->status);
-			if(waitpid(j->pgid, &stat, WUNTRACED) == -1){
-				perror("waitpid");
-				exit(EXIT_FAILURE);
-			}
-
-			puts("4.6");
-			// printf("j->status before wifstopped: %d\n", j->status);
-
-			if(WIFSTOPPED(stat)){
-				
-				puts("5");
-				j->status = SUSPENDED;
-			}
-			else{
-
-				puts("6");
-				j->status = DONE;	
-			}
-
-
-			// printf("j->status after: %d\n", j->status);
-
-			tcsetpgrp(STDIN_FILENO, shell_pgid);
-			
-			tcgetattr(STDIN_FILENO, j->tmodes);
-			tcsetattr(STDIN_FILENO, TCSADRAIN, shell_tmodes);
-
-
-			puts("7");
-		}
-
-		updateJobList(job_list, FALSE);
-
+		removeJob(job_list, j);;
 	}
+	else if(ret == 0){
+		puts("2");
+
+		tcsetpgrp(STDIN_FILENO, j->pgid);
+
+		if((cont == 1) && (j->status == SUSPENDED)){
+		// if(cont == 1){
+			puts("4");
+
+			tcsetattr(STDIN_FILENO, TCSADRAIN, j->tmodes);
+			
+			if(kill(j->pgid, SIGCONT) == -1){
+
+				perror("kill");
+				exit(0); // NOT sure if necessary..
+			}
+		}
+		
+		puts("4.5");
+
+		// printf("j->status before: %d\n", j->status);
+		if(waitpid(j->pgid, &stat, WUNTRACED) == -1){
+			perror("waitpid");
+			exit(EXIT_FAILURE);
+		}
+
+		puts("4.6");
+		// printf("j->status before wifstopped: %d\n", j->status);
+
+		if(WIFSTOPPED(stat)){
+			
+			puts("5");
+			j->status = SUSPENDED;
+		}
+		else{
+
+			puts("6");
+			j->status = DONE;	
+		}
+
+
+		tcsetpgrp(STDIN_FILENO, shell_pgid);
+		tcgetattr(STDIN_FILENO, j->tmodes);
+		tcsetattr(STDIN_FILENO, TCSADRAIN, shell_tmodes);
+
+
+		puts("7");
+	}
+	else{
+		
+		j->status = DONE;	
+	}
+
+	updateJobList(job_list, FALSE);
 }
 
 /** 

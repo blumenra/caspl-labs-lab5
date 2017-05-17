@@ -130,16 +130,16 @@ int main(int argc, char** argv){
 int execute(cmdLine *pCmdLine){
 
   pid_t curr_pid;
-  int pid = getpid();
-  // int status = 0;
+  // int pid = getpid();
+  int status = 0;
 
 
   if(!specialCommand(pCmdLine)){
 
     job* j = handleNewJob(jobs, pCmdLine);
-    j->pgid = pid;
     
     curr_pid = fork();
+    j->pgid = curr_pid;
 
     if(curr_pid == -1){
 
@@ -154,11 +154,19 @@ int execute(cmdLine *pCmdLine){
         fprintf(stderr, "Executing command: %s\n", pCmdLine->arguments[0]);
       }
       
-      curr_pid = pid;
+      // curr_pid = pid;
 
-      setpgid(curr_pid, pid);
+      // setpgid(curr_pid, pid);
+      set_pgid();
+      // setupSignals(0);
 
-      setupSignals(0);
+      signal(SIGTTIN, SIG_DFL);
+      signal(SIGTTOU, SIG_DFL);
+      signal(SIGQUIT, SIG_DFL);
+      signal(SIGTSTP, SIG_DFL);
+      signal(SIGCHLD, SIG_DFL);
+
+      j->pgid = getgid();
 
       if(execvp(pCmdLine->arguments[0], pCmdLine->arguments) == -1){
         
@@ -174,7 +182,7 @@ int execute(cmdLine *pCmdLine){
 
     // if it's a blocking command' wait for the child process (0) to end before proceeding
     if(pCmdLine->blocking){
-      runJobInForeground (jobs, j, 1, initial_tmodes, shell_pgid);
+      runJobInForeground (jobs, j, 0, initial_tmodes, shell_pgid);
       // if(waitpid(curr_pid, &status, WIFSIGNALED(0)) == -1){
       // if(waitpid(curr_pid, &status, 0) == -1){
       // // if(wait(&status) == -1){
@@ -350,7 +358,7 @@ void setupSignal(int sig, int dfl){
 
   if(!dfl){
 
-    if((sig == SIGTTIN) || (sig == SIGTTOU)){
+    if((sig == SIGTTIN) || (sig == SIGTTOU) || (sig == SIGTSTP)){
 
       if(signal(sig, SIG_IGN) == SIG_ERR){
 

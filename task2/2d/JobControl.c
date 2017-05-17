@@ -210,7 +210,7 @@ void updateJobList(job **job_list, int remove_done_jobs){
 			tmp->status = DONE;
 		}
 
-		if(remove_done_jobs){
+		if((tmp->status == DONE) && remove_done_jobs){
 
 			printf("[%d]\t %s \t\t %s", tmp->idx, statusToStr(tmp->status),tmp -> cmd); 
 	
@@ -253,7 +253,7 @@ void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell
 		tcsetpgrp(STDIN_FILENO, j->pgid);
 
 		if((cont == 1) && (j->status == SUSPENDED)){
-		// if(cont == 1){
+
 			puts("4");
 
 			tcsetattr(STDIN_FILENO, TCSADRAIN, j->tmodes);
@@ -267,14 +267,12 @@ void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell
 		
 		puts("4.5");
 
-		// printf("j->status before: %d\n", j->status);
 		if(waitpid(j->pgid, &stat, WUNTRACED) == -1){
 			perror("waitpid");
 			exit(EXIT_FAILURE);
 		}
 
 		puts("4.6");
-		// printf("j->status before wifstopped: %d\n", j->status);
 
 		if(WIFSTOPPED(stat)){
 			
@@ -284,7 +282,7 @@ void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell
 		else{
 
 			puts("6");
-			j->status = DONE;	
+			j->status = DONE;
 		}
 
 
@@ -300,7 +298,7 @@ void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell
 		j->status = DONE;	
 	}
 
-	updateJobList(job_list, FALSE);
+	updateJobList(job_list, TRUE);
 }
 
 /** 

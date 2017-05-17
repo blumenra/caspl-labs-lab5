@@ -16,7 +16,6 @@ void myPrintJob(job* j, int count){
 		printf("\tpgid: %d\n", (int) j->pgid);
 		printf("\tstatus: %s\n", statusToStr(j->status));
 		printf("\ttmodes: %d\n", tcgetattr(0, j->tmodes));
-		// printf("tmodes: %d\n", tcgetattr(1, j->tmodes));
 
 		if(j->next != NULL){
 
@@ -231,7 +230,6 @@ void updateJobList(job **job_list, int remove_done_jobs){
 
 void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell_tmodes, pid_t shell_pgid){
 
-	puts("1");
 	pid_t ret;
 	int stat;
 
@@ -248,13 +246,10 @@ void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell
 		removeJob(job_list, j);;
 	}
 	else if(ret == 0){
-		puts("2");
 
 		tcsetpgrp(STDIN_FILENO, j->pgid);
 
 		if((cont == 1) && (j->status == SUSPENDED)){
-
-			puts("4");
 
 			tcsetattr(STDIN_FILENO, TCSADRAIN, j->tmodes);
 			
@@ -265,23 +260,18 @@ void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell
 			}
 		}
 		
-		puts("4.5");
 
 		if(waitpid(j->pgid, &stat, WUNTRACED) == -1){
 			perror("waitpid");
 			exit(EXIT_FAILURE);
 		}
 
-		puts("4.6");
-
 		if(WIFSTOPPED(stat)){
 			
-			puts("5");
 			j->status = SUSPENDED;
 		}
 		else{
 
-			puts("6");
 			j->status = DONE;
 		}
 
@@ -289,9 +279,6 @@ void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell
 		tcsetpgrp(STDIN_FILENO, shell_pgid);
 		tcgetattr(STDIN_FILENO, j->tmodes);
 		tcsetattr(STDIN_FILENO, TCSADRAIN, shell_tmodes);
-
-
-		puts("7");
 	}
 	else{
 		
@@ -307,5 +294,15 @@ void runJobInForeground (job** job_list, job *j, int cont, struct termios* shell
 **/
 
 void runJobInBackground (job *j, int cont){	
- 
+
+	
+	if(cont){
+
+		j->status = RUNNING;
+
+		if(kill(j->pgid, SIGCONT) == -1){
+			perror("kill inside runJobInBackground");
+			exit(EXIT_FAILURE);
+		}
+	}
 }

@@ -63,9 +63,6 @@ int main(int argc, char** argv){
     if(userInput[0] != '\n'){
 
       cmdLine* cmdLine = parseCmdLines(userInput);
-      // handleNewJob(jobs, cmdLine);
-      // printCommandLine(cmdLine);
-
       execute(cmdLine);
     }
   }
@@ -124,6 +121,10 @@ int execute(cmdLine *pCmdLine){
     if(pCmdLine->blocking){
 
       runJobInForeground (jobs, j, 0, initial_tmodes, shell_pgid);
+    }
+    else{
+
+      runJobInBackground(j, 0);
     }
   }
 
@@ -215,6 +216,23 @@ int specialCommand(cmdLine *pCmdLine){
       }
     }
       special = 1;
+  }
+  else if(strcmp(command, "bg") == 0){
+
+    if(pCmdLine->argCount < 2){
+
+      fprintf(stderr, "Invalid input of bg. Index is missing.\n");
+    }
+    else{
+
+      job* tmp = findJobByIndex(*jobs, atoi(pCmdLine->arguments[1]));
+      if(tmp != NULL){
+
+        runJobInBackground(tmp, 1);
+      }
+    }
+    
+    special = 1;
   }
 
   return special;

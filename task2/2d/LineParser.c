@@ -131,7 +131,7 @@ int execute(cmdLine *pCmdLine){
 
   pid_t curr_pid;
   // int pid = getpid();
-  int status = 0;
+  // int status = 0;
 
 
   if(!specialCommand(pCmdLine)){
